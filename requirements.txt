@@ -1,0 +1,27 @@
+# Core Audio & AI/ML
+numpy
+sounddevice
+soundfile
+torch
+pyaudio
+librosa
+
+# Transcription
+openai-whisper
+
+# Speaker Diarization
+pyannote.audio
+
+# Event Detection
+tensorflow
+tensorflow-hub
+
+# AI Assistant
+google-generativeai
+
+# UI
+# No package needed for tkinter, it's built-in
+
+# Other
+requests
+transformers
