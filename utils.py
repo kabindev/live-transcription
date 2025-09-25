@@ -2,6 +2,7 @@ import numpy as np
 import os
 import logging
 from typing import Dict, List, Optional, Tuple
+import torch
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -17,10 +18,6 @@ class AudioConfig:
     # Processing chunk is how much audio we feed to the models at once
     PROCESSING_CHUNK_SECONDS = 3
     PROCESSING_CHUNK_SIZE = int(SAMPLE_RATE * PROCESSING_CHUNK_SECONDS)
-
-    # VAD settings
-    VAD_ENERGY_THRESHOLD = 0.005
-    VAD_MIN_SPEECH_DURATION_S = 0.25
 
 def get_audio_devices() -> List[Dict]:
     """Get a list of available audio input devices."""
@@ -58,8 +55,6 @@ class TranscriptionEngine:
             logger.error(f"Whisper transcription error: {e}")
             return {"text": f"[Transcription Error: {e}]"}
 
-
-import torch
 
 class SpeakerDiarizationEngine:
     """Handles speaker diarization using pyannote.audio."""
@@ -182,12 +177,14 @@ class AIAssistant:
 
     def set_api_key(self, key: str):
         """Sets the API key and configures the model."""
+        import google.generativeai as genai
         self.api_key = key
         os.environ["GEMINI_API_KEY"] = key
         self.configure_genai()
 
     def configure_genai(self):
         """Configures the generative AI model."""
+        import google.generativeai as genai
         try:
             genai.configure(api_key=self.api_key)
             self.model = genai.GenerativeModel('gemini-pro')

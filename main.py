@@ -1,4 +1,7 @@
 import os
+import sys
+import tkinter as tk
+from tkinter import messagebox
 import threading
 import queue
 import time
@@ -6,15 +9,31 @@ import numpy as np
 from datetime import datetime
 import logging
 
-# AI/ML Imports
+# Dependency Checking
+try:
+    import pkg_resources
+    with open('requirements.txt') as f:
+        requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+    pkg_resources.require(requirements)
+except (ImportError, pkg_resources.DistributionNotFound, pkg_resources.VersionConflict, FileNotFoundError) as e:
+    root = tk.Tk()
+    root.withdraw()
+    messagebox.showerror(
+        "Dependency Error",
+        f"A required package is missing or has a version conflict: {e}\n\n"
+        "Please run the following command in your terminal:\n\n"
+        "pip install -r requirements.txt"
+    )
+    root.destroy()
+    sys.exit(1)
+
+# --- Main Application Imports ---
 import torch
 import whisper
 from pyannote.audio import Pipeline as DiarizationPipeline
 import tensorflow as tf
 import tensorflow_hub as hub
 import google.generativeai as genai
-
-# Custom Modules
 from ui import TranscriptionUI
 from utils import (
     AudioConfig,
@@ -25,7 +44,7 @@ from utils import (
     get_audio_devices
 )
 
-# Set up logging
+# --- Main Application ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -69,7 +88,6 @@ class MainApp:
         self.ui.update_status("App initialized. Ready to start.", "green")
         self.ui.populate_device_list(get_audio_devices())
 
-        # Check for API keys and tokens
         if not os.environ.get("HUGGINGFACE_TOKEN"):
             self.ui.show_huggingface_token_dialog()
 
@@ -127,12 +145,10 @@ class MainApp:
         self.is_recording.set()
         self.ui.update_status("Starting audio capture...", "blue")
 
-        # Clear previous data
         self.ui.clear_transcript()
         with self.audio_queue.mutex:
             self.audio_queue.queue.clear()
 
-        # Start threads
         self.audio_thread = threading.Thread(target=self.audio_capture_loop, daemon=True)
         self.processing_thread = threading.Thread(target=self.processing_loop, daemon=True)
 
@@ -190,7 +206,7 @@ class MainApp:
             try:
                 self.audio_queue.put_nowait(indata.copy())
             except queue.Full:
-                pass  # Drop frames if the queue is full
+                pass
 
     def processing_loop(self):
         """The main loop for processing audio from the queue."""
@@ -198,19 +214,17 @@ class MainApp:
 
         while self.is_recording.is_set():
             try:
-                # Accumulate audio from the queue
                 while not self.audio_queue.empty():
                     chunk = self.audio_queue.get_nowait()
                     audio_buffer = np.append(audio_buffer, chunk)
 
-                # Process if we have enough audio
                 if len(audio_buffer) >= self.config.PROCESSING_CHUNK_SIZE:
                     segment_to_process = audio_buffer[:self.config.PROCESSING_CHUNK_SIZE]
                     audio_buffer = audio_buffer[self.config.PROCESSING_CHUNK_SIZE:]
 
                     self.process_segment(segment_to_process)
                 else:
-                    time.sleep(0.1)  # Wait for more audio
+                    time.sleep(0.1)
 
             except Exception as e:
                 logger.error(f"Processing loop error: {e}")
@@ -219,8 +233,6 @@ class MainApp:
     def process_segment(self, audio_segment: np.ndarray):
         """Process a single segment of audio for all features."""
         timestamp = datetime.now()
-
-        # --- Run all processing in parallel ---
         transcription_result = {}
         diarization_result = {}
         event_result = {}
@@ -239,7 +251,6 @@ class MainApp:
             if self.event_engine.is_available():
                 event_result = self.event_engine.detect(audio_segment)
 
-        # Start threads
         t_transcribe = threading.Thread(target=run_transcription)
         t_diarize = threading.Thread(target=run_diarization)
         t_events = threading.Thread(target=run_event_detection)
@@ -248,17 +259,14 @@ class MainApp:
         t_diarize.start()
         t_events.start()
 
-        # Wait for them to complete
         t_transcribe.join()
         t_diarize.join()
         t_events.join()
 
-        # --- Combine and display results ---
         transcript_text = transcription_result.get("text", "")
         speaker_label = diarization_result.get("speaker", "SPEAKER_00")
         events = event_result.get("events", [])
 
-        # Update UI
         if transcript_text or events:
             self.root.after(0, self.ui.update_transcript, {
                 "timestamp": timestamp,
@@ -267,7 +275,6 @@ class MainApp:
                 "events": events
             })
 
-            # Update overlay
             if transcript_text:
                 self.root.after(0, self.ui.update_overlay, f"{speaker_label}: {transcript_text}")
 
@@ -298,8 +305,6 @@ class MainApp:
         self.root.destroy()
 
 if __name__ == "__main__":
-    import tkinter as tk
-
     root = tk.Tk()
     app = MainApp(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
