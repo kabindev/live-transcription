@@ -1,0 +1,38 @@
+Your project is about building a system-wide real-time live captioning tool. It captures all computer audio (like video calls, streaming, system sounds) and provides:
+
+Multilingual transcription (supports 96+ languages).
+
+Speaker identification (diarization) to tell who is speaking.
+
+Emotion detection to tag speech with emotions.
+
+AI-powered summarization, translation, and contextual assistance.
+
+Event detection for non-speech sounds (like laughter, alarms).
+
+Visual overlays / GUI display to make captions interactive and accessible.
+
+The motivation is to improve accessibility and inclusivity, especially for hearing-impaired individuals, while also supporting global multilingual communication.
+
+Technologies/tools you considered:
+
+Whisper (for transcription & multilingual support).
+
+pyannote-audio (for speaker diarization).
+
+SpeechBrain (for emotion recognition).
+
+Google Speech API & YAMNet (for transcription & event detection).
+
+Librosa / WASAPI / sounddevice (for audio capture and preprocessing).
+
+LLaMA-3 (for AI assistant + context-aware summaries).
+
+The workflow includes audio capture → preprocessing → transcription → speaker diarization → emotion & event detection → AI assistant → real-time GUI display.
+
+You also defined evaluation metrics like Word Error Rate (WER), Real-Time Factor (RTF), and Diarization Error Rate (DER).
+
+Finally, you showed a partial demo of audio capture, preprocessing, transcription, diarization, and event detection, proving the feasibility of your system.
+
+The core idea:
+It’s not just captioning — it’s a smart, multilingual, real-time assistant layer for all system audio, combining speech recognition, NLP, and accessibility features into one integrated solution.
